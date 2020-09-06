@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>My Chat App</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <style>
+        .clearfix:after
+{
+    content: ".";
+    visibility: hidden;
+    display: block;
+    height: 0px;
+    clear: both;
+}
+        body{
+            background-image: url("{{ url_for('static', filename='background.jpg') }}");
+        }
+    </style>
+</head>
+
+<body>
+    <div id="messages"></div>
+    <div class=" container">
+        <h1 class="col-11 container "style="text-align:center;color:red;">Welcome {{ uname }} to chat room {{ room.name }}</h1>
+         <a href="/rooms/{{room._id }}/edit" class="col-1 btn btn-warning" style="margin-left:180px;margin-bottom:10px;">Edit Room</a>
+        <!-- <button id = "load_older_messages_btn" class="col-2 btn btn-primary" style="margin-left:180px;margin-bottom:10px;">Fetch Old Messages</button> -->
+
+    </div>
+    <h3 class="col-6 container" style="background-color: pink;color: red;padding: 10px;border:1px solid red"> Chat Box </h3>
+
+    <div  class="row container" style="margin-left:104px;background-color:antiquewhite;overflow: scroll;height: 400px;">
+        <div style="background-color:none;padding :10px;" class="col-2 ">
+            <h3 style="color:orange;">Room Members</h3>
+            <ul>
+                {% for member in room_memebrs %}
+                <li> {{ member._id.username}}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div id="chatbox" style="background-color:#eee1f2;padding :10px;" class="col-10">
+
+
+
+                {% for message in messages %}
+                     <div class="col-12 clearfix">
+                    {% if uname == message.sender %}
+                        <div style="width:auto;float:right;height:auto;padding:10px;margin-top:10px;background-color:cyan;border:1px solid darkblue;border-radius:10px;color:blue">
+                            <strong>{{message.sender}}</strong>
+                            <p>{{ message.text }}</p>
+
+                        </div>
+                    {% else %}
+                        <div style="width:auto;height:auto;float:left;padding:10px;margin-top:10px;background-color:orange;border:1px solid orange;border-radius:10px;color:#8f3400">
+                            <strong>{{message.sender}}</strong>
+                            <p>{{ message.text }}</p>
+
+                        </div>
+                    {% endif %}
+                         </div>
+                {% endfor %}
+
+
+        </div>
+    </div>
+    <div id="msgbox" class="col-6 container">
+        <form id="message_input_form">
+            <input name="msgbox" id="message_input" style="padding:10px;margin: 8px; width:50%;">
+            <input type="submit" value="Send" class="btn btn-success">
+            <a href="/logout/" class="btn btn-danger">LogOut</a>
+        </form>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+<script>
+
+    const socket = io.connect("http://127.0.0.1:5000");
+
+    socket.on('connect', function() {
+
+        socket.emit('join_room', {
+            username: "{{ uname }}",
+            room: "{{ room._id }}"
+        });
+
+
+    });
+
+
+    socket.on('receive_msg', function(data) {
+
+        const newmsg = document.createElement("p");
+        newmsg.innerHTML = `${data.message}`;
+        const newname = document.createElement("strong");
+        newname.innerHTML = `${data.username}`;
+
+        chatbody = document.createElement("div");
+        chatbody.style.width="auto";
+        chatbody.style.height="auto";
+        chatbody.style.padding="10px";
+        chatbody.style.marginTop="10px";
+        chatbody.appendChild(newname);
+        chatbody.appendChild(newmsg);
+
+        maindiv= document.createElement("div");
+        maindiv.className+="col-12";
+        maindiv.appendChild(chatbody);
+
+        name = data.username
+        username = "{{ uname }}"
+        if (name == username) {
+            chatbody.style.float+="right";
+            maindiv.className+=" clearfix"
+            chatbody.style.backgroundColor="cyan";
+            chatbody.style.border="1px solid darkblue";
+            chatbody.style.borderRadius="10px";
+            chatbody.style.color="blue";
+        } else {
+            chatbody.style.float+="left";
+            maindiv.className+=" clearfix";
+            chatbody.style.backgroundColor="#f7d679";
+            chatbody.style.border="1px solid orange";
+            chatbody.style.color="#8f3400";
+            chatbody.style.borderRadius="10px";
+        }
+        document.getElementById("chatbox").appendChild(maindiv);
+
+    });
+    socket.on('leave_room_announcement', function(data) {
+        const newnode = document.createElement("div");
+        newnode.innerHTML = `${data.username} Has Left Room`;
+        newnode.style.textAlign="center";
+        newnode.style.color="red";
+        newnode.style.fontSize="20px";
+        
+        newnode.style.fontWeight="bold";
+        
+        
+
+        document.getElementById("messages").appendChild(newnode);
+    });
+       socket.on('join_room_announcement', function(data) {
+
+        const newnode = document.createElement("div");
+        newnode.innerHTML = `${data.username} Has Joined Room`;
+        newnode.style.textAlign="center";
+        newnode.style.color="white";
+        newnode.style.fontSize="20px";
+        newnode.style.fontWeight="bold";
+
+
+        document.getElementById("messages").appendChild(newnode);
+
+    });
+    window.onbeforeunload = function() {
+        socket.emit('leave_room', {
+            username: "{{ uname}}",
+            room: "{{ room._id }}"
+        })
+    };
+    let message_input = document.getElementById('message_input');
+    document.getElementById("message_input_form").onsubmit = function(e) {
+        e.preventDefault();
+        let msg = message_input.value.trim();
+        if (msg.length) {
+            socket.emit('send_message', {
+                username: "{{ uname }}",
+                room: "{{ room._id }}",
+                message: msg
+            })
+        }
+        message_input.value = '';
+        message_input.focus();
+    }
+
+</script>
+
+</html>
